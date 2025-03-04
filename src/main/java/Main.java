@@ -1,6 +1,10 @@
 import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Set;
+
 
 public class Main {
+    static Set<String> commands = Set.of("exit", "echo", "type");    
     public static void main(String[] args) throws Exception {
         // Uncomment this block to pass the first stage
 
@@ -24,6 +28,14 @@ public class Main {
             }
             else if (cmds[0].equals("echo")) {
                 System.out.println(cmds[1]);
+            }
+            else if (cmds[0].equals("type")) {
+                if (commands.contains(cmds[1])) {
+                    System.out.println(cmds[1] + " is a shell builtin");
+                }
+                else {
+                    System.out.println(input + ": command not found");
+                }
             }
             else {
                 System.out.print(input + ": command not found\n");
