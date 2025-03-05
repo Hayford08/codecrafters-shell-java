@@ -40,6 +40,7 @@ public class Main {
                 continue;
             }
             if (cmds[0].equals("exit")) {
+                scanner.close();
                 try {
                     System.exit(Integer.parseInt(cmds[1]));
                 }
@@ -65,7 +66,19 @@ public class Main {
                 }
             }
             else {
-                System.out.print(input + ": command not found\n");
+                String dir = exeToDirectory.get(cmds[0]);
+                if (dir != null) {
+                    cmds = input.split(" ");
+                    Process process = Runtime.getRuntime().exec(cmds);
+                    Scanner scanner1 = new Scanner(process.getInputStream());
+                    while (scanner1.hasNextLine()) {
+                        System.out.println(scanner1.nextLine());
+                    }
+                    scanner1.close();
+                }
+                else {
+                    System.out.print(input + ": command not found\n");
+                }
             }
         }
     }
