@@ -1,5 +1,6 @@
+import java.io.File;
+import java.util.HashMap;
 import java.util.Scanner;
-import java.util.HashSet;
 import java.util.Set;
 
 
@@ -7,6 +8,26 @@ public class Main {
     static Set<String> commands = Set.of("exit", "echo", "type");    
     public static void main(String[] args) throws Exception {
         // Uncomment this block to pass the first stage
+
+        HashMap<String, String> exeToDirectory = new HashMap<>();
+        String path = System.getenv("PATH");
+        if (path != null) {
+            for (String dir : path.split(":")) {
+                File directory = new File(dir);
+                if (!directory.isDirectory()) {
+                    continue;
+                }
+                File[] files = directory.listFiles();
+                if (files == null) {
+                    continue;
+                }
+                for (File file : files) {
+                    if (file.isFile() && file.canExecute()) {
+                        exeToDirectory.put(file.getName(), dir);
+                    }
+                }
+            }
+        }
 
         while (true) {
             System.out.print("$ ");
@@ -34,7 +55,13 @@ public class Main {
                     System.out.println(cmds[1] + " is a shell builtin");
                 }
                 else {
-                    System.out.println(cmds[1] + ": not found");
+                    String dir = exeToDirectory.get(cmds[1]);
+                    if (dir != null) {
+                        System.out.println(cmds[1] + " is " + dir + "/" + cmds[1]);
+                    }
+                    else {
+                        System.out.println(cmds[1] + ": not found");
+                    }
                 }
             }
             else {
