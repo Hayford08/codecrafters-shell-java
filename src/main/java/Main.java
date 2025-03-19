@@ -1,18 +1,65 @@
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.Set;
 
-
 public class Main {
-    static Set<String> commands = Set.of("exit", "echo", "type");    
+    static Set<String> commands = Set.of("exit", "echo", "type");
+    
+    static ArrayList<String> tokenizeInputString(String input) {
+        ArrayList<String> output = new ArrayList<>();
+        int n = input.length();
+        int index = 0;
+        while (index < n) {
+            boolean spaceFound = false;
+            while (index < n && input.charAt(index) == ' ') {
+                spaceFound = true;
+                index++;
+            }
+            if (index >= n) {
+                break;
+            }
+            if (spaceFound) {
+                output.add(" ");
+            }
+            if (input.charAt(index) == '\'' || input.charAt(index) == '\"') {
+                char quote = input.charAt(index);
+                index++;
+                StringBuilder sb = new StringBuilder();
+                while (index < n && input.charAt(index) != quote) {
+                    sb.append(input.charAt(index));
+                    index++;
+                }
+                if (index == n) {
+                    output.add(quote + sb.toString());
+                }
+                output.add(sb.toString());
+                index++;
+            }
+            else {
+                StringBuilder sb = new StringBuilder();
+                while (index < n && input.charAt(index) != ' ') {
+                    sb.append(input.charAt(index));
+                    index++;
+                }
+                output.add(sb.toString());
+            }
+        }
+        return output;
+    }
+    
+    
     public static void main(String[] args) throws Exception {
         // Uncomment this block to pass the first stage
 
         HashMap<String, String> exeToDirectory = new HashMap<>();
-        String path = System.getenv("PATH");
-        if (path != null) {
-            for (String dir : path.split(":")) {
+        String systemPath = System.getenv("PATH");
+        if (systemPath != null) {
+            for (String dir : systemPath.split(":")) {
                 File directory = new File(dir);
                 if (!directory.isDirectory()) {
                     continue;
@@ -49,7 +96,15 @@ public class Main {
                 }
             }
             else if (cmds[0].equals("echo")) {
-                System.out.println(cmds[1]);
+                if (cmds.length == 1) {
+                    System.out.println();
+                }
+                else {
+                    for (String s : tokenizeInputString(cmds[1])) {
+                        System.out.print(s);
+                    }
+                    System.out.println();
+                }
             }
             else if (cmds[0].equals("type")) {
                 if (commands.contains(cmds[1])) {
@@ -65,16 +120,32 @@ public class Main {
                     }
                 }
             }
+            else if (cmds[0].equals("cat")) {
+                if (cmds.length == 1) {
+                    System.out.print("cat: missing operand\n");
+                    continue;
+                }
+                StringBuilder sb = new StringBuilder();
+                for (String token : tokenizeInputString(cmds[1])) {
+                    if (token.equals(" ")) {
+                        continue;
+                    }
+                    Path path = Paths.get(token);
+                    if (!Files.exists(path)) {
+                        sb.append(token);
+                    }
+                    else {
+                        Files.lines(path).forEach(sb::append);
+                    }
+                }
+                System.out.println(sb.toString());
+            }
             else {
                 String dir = exeToDirectory.get(cmds[0]);
                 if (dir != null) {
                     cmds = input.split(" ");
                     Process process = Runtime.getRuntime().exec(cmds);
-                    Scanner scanner1 = new Scanner(process.getInputStream());
-                    while (scanner1.hasNextLine()) {
-                        System.out.println(scanner1.nextLine());
-                    }
-                    scanner1.close();
+                    process.getInputStream().transferTo(System.out);
                 }
                 else {
                     System.out.print(input + ": command not found\n");
