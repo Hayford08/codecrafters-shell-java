@@ -43,6 +43,12 @@ public class Main {
             else {
                 StringBuilder sb = new StringBuilder();
                 while (index < n && input.charAt(index) != ' ') {
+                    if (input.charAt(index) == '\\' && index + 1 < n) {
+                        index++;
+                        sb.append(input.charAt(index));
+                        index++;
+                        continue;
+                    } 
                     sb.append(input.charAt(index));
                     index++;
                 }
