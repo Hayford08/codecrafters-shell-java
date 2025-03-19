@@ -9,6 +9,7 @@ import java.util.Set;
 
 public class Main {
     static Set<String> commands = Set.of("exit", "echo", "type");
+    static final String CHARACTERS_TO_PRESERVE = "$\"\\";
     
     static ArrayList<String> tokenizeInputString(String input) {
         ArrayList<String> output = new ArrayList<>();
@@ -31,6 +32,12 @@ public class Main {
                 index++;
                 StringBuilder sb = new StringBuilder();
                 while (index < n && input.charAt(index) != quote) {
+                    if (quote == '\"' && input.charAt(index) == '\\' && index + 1 < n && CHARACTERS_TO_PRESERVE.indexOf(input.charAt(index + 1)) != -1) {
+                        index++;
+                        sb.append(input.charAt(index));
+                        index++;
+                        continue;
+                    }
                     sb.append(input.charAt(index));
                     index++;
                 }
