@@ -92,60 +92,63 @@ public class Main {
         while (true) {
             System.out.print("$ ");
             Scanner scanner = new Scanner(System.in);
-            String input = scanner.nextLine();
-            
-            String[] cmds = input.split(" ", 2);
-            if (cmds.length == 0) {
-                System.out.print(input + ": command not found\n");
+            String input = scanner.nextLine().trim();
+
+            ArrayList<String> tokens = tokenizeInputString(input);
+            if (tokens.size() == 0) {
+                System.out.println(input + ": command not found");
                 continue;
             }
-            if (cmds[0].equals("exit")) {
+            if (tokens.get(0).equals("exit")) {
                 scanner.close();
                 try {
-                    System.exit(Integer.parseInt(cmds[1]));
+                    int index = input.indexOf(tokens.get(0)) + tokens.get(0).length();
+                    System.exit(Integer.parseInt(input.substring(index).trim()));
                 }
                 catch (Exception e) {
                     System.exit(1);
                 }
             }
-            else if (cmds[0].equals("echo")) {
-                if (cmds.length == 1) {
+            else if (tokens.get(0).equals("echo")) {
+                if (tokens.size() == 1) {
                     System.out.println();
                 }
                 else {
-                    for (String s : tokenizeInputString(cmds[1])) {
-                        System.out.print(s);
+                    for (int i = 2; i < tokens.size(); i++) {
+                        System.out.print(tokens.get(i));
                     }
                     System.out.println();
                 }
             }
-            else if (cmds[0].equals("type")) {
-                if (commands.contains(cmds[1])) {
-                    System.out.println(cmds[1] + " is a shell builtin");
+            else if (tokens.get(0).equals("type")) {
+                int index = input.indexOf(tokens.get(0)) + tokens.get(0).length();
+                String cmd = input.substring(index).trim();
+                if (commands.contains(cmd)) {
+                    System.out.println(cmd + " is a shell builtin");
                 }
                 else {
-                    String dir = exeToDirectory.get(cmds[1]);
+                    String dir = exeToDirectory.get(cmd);
                     if (dir != null) {
-                        System.out.println(cmds[1] + " is " + dir + "/" + cmds[1]);
+                        System.out.println(cmd + " is " + dir + "/" + cmd);
                     }
                     else {
-                        System.out.println(cmds[1] + ": not found");
+                        System.out.println(cmd + ": not found");
                     }
                 }
             }
-            else if (cmds[0].equals("cat")) {
-                if (cmds.length == 1) {
+            else if (tokens.get(0).equals("cat")) {
+                if (tokens.size() == 1) {
                     System.out.print("cat: missing operand\n");
                     continue;
                 }
                 StringBuilder sb = new StringBuilder();
-                for (String token : tokenizeInputString(cmds[1])) {
-                    if (token.equals(" ")) {
+                for (int i = 1; i < tokens.size(); i++) {
+                    if (tokens.get(i).equals(" ")) {
                         continue;
                     }
-                    Path path = Paths.get(token);
+                    Path path = Paths.get(tokens.get(i));
                     if (!Files.exists(path)) {
-                        sb.append(token);
+                        sb.append(tokens.get(i));
                     }
                     else {
                         Files.lines(path).forEach(sb::append);
@@ -154,10 +157,17 @@ public class Main {
                 System.out.println(sb.toString());
             }
             else {
-                String dir = exeToDirectory.get(cmds[0]);
+                String dir = exeToDirectory.get(tokens.get(0));
                 if (dir != null) {
-                    cmds = input.split(" ");
-                    Process process = Runtime.getRuntime().exec(cmds);
+                    ArrayList<String> cmds = new ArrayList<>();
+                    cmds.add(tokens.get(0));
+                    for (int i = 1; i < tokens.size(); i++) {
+                        if (tokens.get(i).equals(" ")) {
+                            continue;
+                        }
+                        cmds.add(tokens.get(i));
+                    }
+                    Process process = Runtime.getRuntime().exec(cmds.toArray(new String[0]));
                     process.getInputStream().transferTo(System.out);
                 }
                 else {
