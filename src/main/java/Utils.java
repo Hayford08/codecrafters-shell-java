@@ -1,4 +1,9 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Pattern;
 
 public class Utils {
   static final String CHARACTERS_TO_PRESERVE = "$\"\\";
@@ -6,7 +11,7 @@ public class Utils {
     throw new IllegalStateException("Utility class");
   }
   
-  static ArrayList<String> tokenizeInputString(String input) {
+  static List<String> tokenizeInputString(String input) {
     ArrayList<String> tokens = new ArrayList<>();
     int n = input.length();
     int index = 0;
@@ -66,5 +71,25 @@ public class Utils {
       index++;
     }
     return new Pair<>(sb.toString(), index);
+  }
+
+  static Integer findRedirectIndex(List<String> tokens) {
+    for (int n = tokens.size(), i = 0; i < n; i++) {
+      Pattern pattern = Pattern.compile("^[1-9]?>$");
+      if (pattern.matcher(tokens.get(i)).matches()) {
+        return i;
+      }
+    }
+    return null;
+  }
+
+  static String getProcessOutput(Process process) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    String line;
+    while ((line = reader.readLine()) != null) {
+      sb.append(line).append(System.lineSeparator());
+    }
+    return sb.toString().trim();
   }
 }

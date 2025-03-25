@@ -1,10 +1,11 @@
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
@@ -36,35 +37,58 @@ public class Shell {
     }
   }
 
-  public void run() throws Exception {
+  public void run() {
     while (true) {
       System.out.print("$ ");
       String input = scanner.nextLine().trim();
-      ArrayList<String> tokens = Utils.tokenizeInputString(input);
+      List<String> tokens = Utils.tokenizeInputString(input);
       if (tokens.isEmpty()) {
         continue;
       }
-      handleCommand(tokens, input);
+      try {
+        runShellCommand(tokens, input);
+      }
+      catch (Exception e) {
+        System.out.println("An error occurred: " + e.getMessage());
+        break;
+      }
     }
   }
 
-  private void handleCommand(ArrayList<String> tokens, String input) throws IOException {
+  private void runShellCommand(List<String> tokens, String input) throws Exception {
+    Integer redirectIndex = Utils.findRedirectIndex(tokens);
+    if (redirectIndex != null && redirectIndex < tokens.size() - 2) {
+      String fileName = tokens.get(redirectIndex + 2);
+      Path path = Paths.get(fileName);
+      Files.createDirectories(path.getParent());
+      PrintStream out = new PrintStream(new FileOutputStream(fileName, false));
+
+      List<String> numTokens = tokens.subList(0, redirectIndex);
+      handleCommand(numTokens, String.join("", numTokens), out);
+      return;
+    }
+    handleCommand(tokens, input, System.out);
+  }
+
+  private void handleCommand(List<String> tokens, String input, PrintStream out) throws Exception {
     String command = tokens.get(0);
     if (command.equals("exit")) {
       handleExit(input);
+      return;
     }
-    else if (command.equals("echo")) {
-      handleEcho(tokens);
+    if (command.equals("echo")) {
+      handleEcho(tokens, out);
+      return;
     }
-    else if (command.equals("type")) {
-      handleType(tokens, input);
+    if (command.equals("type")) {
+      handleType(tokens, input, out);
+      return;
     }
-    else if (command.equals("cat")) {
-      handleCat(tokens);
+    if (command.equals("cat")) {
+      handleCat(tokens, out);
+      return;
     }
-    else {
-      handleExternalCommand(tokens);
-    }
+    handleExternalCommand(tokens, out);
   }
 
   private void handleExit(String input) {
@@ -78,60 +102,70 @@ public class Shell {
     }
   }
 
-  private void handleEcho(ArrayList<String> tokens) {
+  private void handleEcho(List<String> tokens, PrintStream out) {
     if (tokens.size() == 1) {
-      System.out.println();
+      out.println();
+      return;
     } 
-    else {
-      for (int i = 2; i < tokens.size(); i++) {
-        System.out.print(tokens.get(i));
-      }
-      System.out.println();
+    StringBuilder sb = new StringBuilder();
+    for (int i = 2; i < tokens.size(); i++) {
+      sb.append(tokens.get(i));
     }
+    out.println(sb);
   }
 
-  private void handleType(ArrayList<String> tokens, String input) {
+  private void handleType(List<String> tokens, String input, PrintStream out) {
     int index = input.indexOf("type") + "type".length();
     String executable = input.substring(index).trim();
     if (COMMANDS.contains(executable)) {
-      System.out.println(executable + " is a shell builtin");
+      out.println(executable + " is a shell builtin");
+      return;
     }
-    else {
-      String path = executableToPath.get(executable);
-      if (path == null) {
-        System.out.println(executable + ": command not found");
+
+    String systemPath = System.getenv("PATH");
+    if (systemPath != null) {
+      for (String dir : systemPath.split(":")) {
+        Path path = Paths.get(dir, executable);
+        if (Files.isExecutable(path)) {
+          out.println(executable + " is " + path.toString());
+          return;
+        }
+      }
+    }
+
+    out.println(executable + ": not found");
+  }
+
+  private void handleCat(List<String> tokens, PrintStream out) throws Exception {
+    if (tokens.size() == 1) {
+      out.println("cat: missing operand");
+      return;
+    }
+    StringBuilder sb = new StringBuilder();
+    for (int i = 1; i < tokens.size(); i++) {
+      if (tokens.get(i).equals(" ")) {
+        continue;
+      }
+      Path path = Paths.get(tokens.get(i));
+      if (Files.exists(path)) {
+        sb.append(Files.readString(path));
       }
       else {
-        System.out.println(executable + " is " + path + "/" + executable);
+        String output = sb.toString().trim();
+        if (!output.isEmpty()) {
+          out.println(output);
+        }
+        System.out.println("cat: " + tokens.get(i) + ": No such file or directory");
+        return;
       }
     }
+    out.println(sb.toString().trim());
   }
 
-  private void handleCat(ArrayList<String> tokens) throws IOException {
-    if (tokens.size() == 1) {
-      System.out.println("cat: missing operand");
-    }
-    else {
-      StringBuilder sb = new StringBuilder();
-      for (int i = 1; i < tokens.size(); i++) {
-        if (tokens.get(i).equals(" ")) {
-          continue;
-        }
-        Path path = Paths.get(tokens.get(i));
-        if (Files.exists(path)) {
-          Files.lines(path).forEach(sb::append);
-        }
-        else {
-          sb.append(tokens.get(i));
-        }
-      }
-    }
-  }
-
-  private void handleExternalCommand(ArrayList<String> tokens) throws IOException {
+  private void handleExternalCommand(List<String> tokens, PrintStream out) throws IOException {
     String path = executableToPath.get(tokens.get(0));
     if (path == null) {
-      System.out.println(tokens.get(0) + ": command not found");
+      out.println(tokens.get(0) + ": not found");
       return;
     }
     ArrayList<String> commands = new ArrayList<>();
@@ -143,6 +177,6 @@ public class Shell {
       commands.add(tokens.get(i));
     }
     Process process = Runtime.getRuntime().exec(commands.toArray(new String[0]));
-    process.getInputStream().transferTo(System.out);
+    out.println(Utils.getProcessOutput(process));
   }
 }
