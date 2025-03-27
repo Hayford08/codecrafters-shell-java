@@ -1,6 +1,4 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -9,6 +7,36 @@ public class Utils {
   static final String CHARACTERS_TO_PRESERVE = "$\"\\";
   private Utils() {
     throw new IllegalStateException("Utility class");
+  }
+
+  public enum OutputType {
+    STDOUT,
+    STDERR,
+  }
+
+  static public void writeToOutput(String output, OutputType outputType, PrintStream out, OutputType redirectType) {
+    if (outputType == redirectType) {
+      out.println(output);
+      return;
+    }
+    System.out.println(output);
+  }
+
+  static public OutputType getRedirectType(String redirect) {
+    if (redirect.equals("2>")) {
+      return OutputType.STDERR;
+    }
+    return OutputType.STDOUT;
+  }
+
+  static Integer findRedirectIndex(List<String> tokens) {
+    for (int n = tokens.size(), i = 0; i < n; i++) {
+      Pattern pattern = Pattern.compile("^[1-9]?>$");
+      if (pattern.matcher(tokens.get(i)).matches()) {
+        return i;
+      }
+    }
+    return null;
   }
   
   static List<String> tokenizeInputString(String input) {
@@ -73,19 +101,15 @@ public class Utils {
     return new Pair<>(sb.toString(), index);
   }
 
-  static Integer findRedirectIndex(List<String> tokens) {
-    for (int n = tokens.size(), i = 0; i < n; i++) {
-      Pattern pattern = Pattern.compile("^[1-9]?>$");
-      if (pattern.matcher(tokens.get(i)).matches()) {
-        return i;
-      }
+  static String getProcessOutput(Process process, Integer exitCode) throws IOException {
+    BufferedReader reader = null;
+    if (exitCode == 0) {
+      reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
     }
-    return null;
-  }
-
-  static String getProcessOutput(Process process) throws IOException {
+    else {
+        reader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+    }
     StringBuilder sb = new StringBuilder();
-    BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
     String line;
     while ((line = reader.readLine()) != null) {
       sb.append(line).append(System.lineSeparator());
