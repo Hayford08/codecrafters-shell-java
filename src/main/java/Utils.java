@@ -10,28 +10,52 @@ public class Utils {
   }
 
   public enum OutputType {
-    STDOUT,
-    STDERR,
+    REDIRECT_STDOUT,
+    REDIRECT_STDERR,
+    APPEND_STDOUT,
+    APPEND_STDERR
+  }
+
+  static public void writeOrAppendToFile(String output, PrintStream out, OutputType outputType) {
+    if (outputType == OutputType.APPEND_STDERR || outputType == OutputType.APPEND_STDOUT) {
+      out.append(output).append(System.lineSeparator());
+      return;
+    }
+    out.println(output);
   }
 
   static public void writeToOutput(String output, OutputType outputType, PrintStream out, OutputType redirectType) {
-    if (outputType == redirectType) {
-      out.println(output);
+    output = output.trim();
+    if (output.isEmpty()) {
+      return;
+    }
+    if (outputType == OutputType.REDIRECT_STDOUT && (redirectType == OutputType.APPEND_STDOUT || redirectType == OutputType.REDIRECT_STDOUT)) {
+      writeOrAppendToFile(output, out, redirectType);
+      return;
+    }
+    if (outputType == OutputType.REDIRECT_STDERR && (redirectType == OutputType.APPEND_STDERR || redirectType == OutputType.REDIRECT_STDERR)) {
+      writeOrAppendToFile(output, out, redirectType);
       return;
     }
     System.out.println(output);
   }
 
   static public OutputType getRedirectType(String redirect) {
-    if (redirect.equals("2>")) {
-      return OutputType.STDERR;
+    if (redirect.equals(">") || redirect.equals("1>")) {
+      return OutputType.REDIRECT_STDOUT;
     }
-    return OutputType.STDOUT;
+    if (redirect.equals(">>") || redirect.equals("1>>")) {
+      return OutputType.APPEND_STDOUT;
+    }
+    if (redirect.equals("2>")) {
+      return OutputType.REDIRECT_STDERR;
+    }
+    return OutputType.APPEND_STDERR;
   }
 
   static Integer findRedirectIndex(List<String> tokens) {
     for (int n = tokens.size(), i = 0; i < n; i++) {
-      Pattern pattern = Pattern.compile("^[1-9]?>$");
+      Pattern pattern = Pattern.compile("^[1-2]?>$|^[1-2]?>>$");
       if (pattern.matcher(tokens.get(i)).matches()) {
         return i;
       }

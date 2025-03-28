@@ -2,7 +2,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -63,13 +62,13 @@ public class Shell {
       String fileName = tokens.get(redirectIndex + 2);
       Path path = Paths.get(fileName);
       Files.createDirectories(path.getParent());
-      PrintStream out = new PrintStream(new FileOutputStream(fileName, false));
+      PrintStream out = new PrintStream(new FileOutputStream(fileName, true));
 
       List<String> numTokens = tokens.subList(0, redirectIndex);
       handleCommand(numTokens, String.join("", numTokens), out, redirectType);
       return;
     }
-    handleCommand(tokens, input, System.out, Utils.OutputType.STDOUT);
+    handleCommand(tokens, input, System.out, Utils.OutputType.REDIRECT_STDOUT);
   }
 
   private void handleCommand(List<String> tokens, String input, PrintStream out, Utils.OutputType outputType) {
@@ -112,14 +111,14 @@ public class Shell {
     for (int i = 2; i < tokens.size(); i++) {
       sb.append(tokens.get(i));
     }
-    Utils.writeToOutput(sb.toString().trim(), Utils.OutputType.STDOUT, out, outputType);
+    Utils.writeToOutput(sb.toString().trim(), Utils.OutputType.REDIRECT_STDOUT, out, outputType);
   }
 
   private void handleType(String input, PrintStream out, Utils.OutputType outputType) {
     int index = input.indexOf("type") + "type".length();
     String executable = input.substring(index).trim();
     if (COMMANDS.contains(executable)) {
-      Utils.writeToOutput(executable + " is a shell builtin", Utils.OutputType.STDOUT, out, outputType);
+      Utils.writeToOutput(executable + " is a shell builtin", Utils.OutputType.REDIRECT_STDOUT, out, outputType);
       return;
     }
 
@@ -128,17 +127,17 @@ public class Shell {
       for (String dir : systemPath.split(":")) {
         Path path = Paths.get(dir, executable);
         if (Files.isExecutable(path)) {
-          Utils.writeToOutput(executable + " is " + path.toString(), Utils.OutputType.STDOUT, out, outputType);
+          Utils.writeToOutput(executable + " is " + path.toString(), Utils.OutputType.REDIRECT_STDOUT, out, outputType);
           return;
         }
       }
     }
-    Utils.writeToOutput(executable + ": not found", Utils.OutputType.STDERR, out, outputType);
+    Utils.writeToOutput(executable + ": not found", Utils.OutputType.REDIRECT_STDERR, out, outputType);
   }
 
   private void handleCat(List<String> tokens, PrintStream out, Utils.OutputType outputType) {
     if (tokens.size() == 1) {
-      Utils.writeToOutput("cat: missing operand", Utils.OutputType.STDERR, out, outputType);
+      Utils.writeToOutput("cat: missing operand", Utils.OutputType.REDIRECT_STDERR, out, outputType);
       return;
     }
     StringBuilder sb = new StringBuilder();
@@ -154,16 +153,16 @@ public class Shell {
         else {
           String output = sb.toString().trim();
           if (!output.isEmpty()) {
-            Utils.writeToOutput(output, Utils.OutputType.STDOUT, out, outputType);
+            Utils.writeToOutput(output, Utils.OutputType.REDIRECT_STDOUT, out, outputType);
           }
-          Utils.writeToOutput("cat: " + tokens.get(i) + ": No such file or directory", Utils.OutputType.STDERR, out, outputType);
+          Utils.writeToOutput("cat: " + tokens.get(i) + ": No such file or directory", Utils.OutputType.REDIRECT_STDERR, out, outputType);
           return;
         }
       }
-      Utils.writeToOutput(sb.toString().trim(), Utils.OutputType.STDOUT, out, outputType);
+      Utils.writeToOutput(sb.toString().trim(), Utils.OutputType.REDIRECT_STDOUT, out, outputType);
     }
     catch (IOException e) {
-      Utils.writeToOutput(e.getMessage(), Utils.OutputType.STDERR, out, outputType);
+      Utils.writeToOutput(e.getMessage(), Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
   }
 
@@ -183,15 +182,11 @@ public class Shell {
     }
     try {
       Process process = Runtime.getRuntime().exec(commands.toArray(new String[0]));
-      if (process.waitFor() == 0) {
-        Utils.writeToOutput(Utils.getProcessOutput(process, 0), Utils.OutputType.STDOUT, out, outputType);
-      }
-      else {
-        Utils.writeToOutput(Utils.getProcessOutput(process, 1), Utils.OutputType.STDERR, out, outputType);
-      }
+      int exitCode = process.waitFor();
+      Utils.writeToOutput(Utils.getProcessOutput(process, exitCode), exitCode == 0 ? Utils.OutputType.REDIRECT_STDOUT : Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
     catch (Exception e) {
-      Utils.writeToOutput(e.getMessage(), Utils.OutputType.STDERR, out, outputType);
+      Utils.writeToOutput(e.getMessage(), Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
 
   }
