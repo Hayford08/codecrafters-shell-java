@@ -6,13 +6,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 
 public class Shell {
   private static final Set<String> COMMANDS = Set.of("exit", "echo", "type");
   private final Map<String, String> executableToPath = new HashMap<>();
-  private final Scanner scanner = new Scanner(System.in);
   
   public Shell() {
     // init 
@@ -38,8 +36,7 @@ public class Shell {
 
   public void run() {
     while (true) {
-      System.out.print("$ ");
-      String input = scanner.nextLine().trim();
+      String input = Utils.processInputCommand(COMMANDS);
       List<String> tokens = Utils.tokenizeInputString(input);
       if (tokens.isEmpty()) {
         continue;
@@ -93,7 +90,6 @@ public class Shell {
   }
 
   private void handleExit(String input) {
-    scanner.close();
     try {
       int index = input.indexOf("exit") + "exit".length();
       System.exit(Integer.parseInt(input.substring(index).trim()));      
@@ -127,7 +123,7 @@ public class Shell {
       for (String dir : systemPath.split(":")) {
         Path path = Paths.get(dir, executable);
         if (Files.isExecutable(path)) {
-          Utils.writeToOutput(executable + " is " + path.toString(), Utils.OutputType.REDIRECT_STDOUT, out, outputType);
+          Utils.writeToOutput(executable + " is " + path, Utils.OutputType.REDIRECT_STDOUT, out, outputType);
           return;
         }
       }
@@ -188,6 +184,5 @@ public class Shell {
     catch (Exception e) {
       Utils.writeToOutput(e.getMessage(), Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
-
   }
 }

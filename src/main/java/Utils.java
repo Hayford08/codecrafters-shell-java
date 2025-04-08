@@ -1,12 +1,40 @@
+import org.jline.reader.Completer;
+import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.impl.DefaultParser;
+import org.jline.reader.impl.completer.StringsCompleter;
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class Utils {
-  static final String CHARACTERS_TO_PRESERVE = "$\"\\";
+  static final String CHARACTERS_TO_PRESERVE = "$\"\\\n";
   private Utils() {
     throw new IllegalStateException("Utility class");
+  }
+
+  static public String processInputCommand(Set<String> commands) {
+    try {
+      Logger jlineLogger = Logger.getLogger("org.jline");
+      jlineLogger.setLevel(Level.OFF);
+
+      Terminal terminal = TerminalBuilder.builder().system(true).build();
+      Completer completer = new StringsCompleter(commands);
+      DefaultParser parser = new DefaultParser();
+      parser.setEscapeChars("".toCharArray());
+      LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).completer(completer).parser(parser).build();
+      return lineReader.readLine("$ ");
+    } catch (IOException e) {
+      e.printStackTrace();
+      return "";
+    }
   }
 
   public enum OutputType {
@@ -104,7 +132,7 @@ public class Utils {
       index++;
     }
     if (index >= n) {
-      sb.append(quote);
+      sb = new StringBuilder().append(quote).append(sb);
     }
     return new Pair<>(sb.toString(), index + 1);
   }
@@ -126,7 +154,7 @@ public class Utils {
   }
 
   static String getProcessOutput(Process process, Integer exitCode) throws IOException {
-    BufferedReader reader = null;
+    BufferedReader reader;
     if (exitCode == 0) {
       reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
     }
