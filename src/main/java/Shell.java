@@ -2,18 +2,16 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class Shell {
-  private static final Set<String> COMMANDS = Set.of("exit", "echo", "type");
+  private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type");
   private final Map<String, String> executableToPath = new HashMap<>();
+
+  private final HashSet<String> commands = new HashSet<>(BUILTIN_COMMANDS);
   
   public Shell() {
-    // init 
+    // init
     String systemPath = System.getenv("PATH");
     if (systemPath != null) {
       for (String dir : systemPath.split(":")) {
@@ -27,6 +25,7 @@ public class Shell {
         }
         for (File file : files) {
           if (file.isFile() && file.canExecute()) {
+            commands.add(file.getName());
             executableToPath.put(file.getName(), dir);
           }
         }
@@ -36,7 +35,7 @@ public class Shell {
 
   public void run() {
     while (true) {
-      String input = Utils.processInputCommand(COMMANDS);
+      String input = Utils.processInputCommand(commands);
       List<String> tokens = Utils.tokenizeInputString(input);
       if (tokens.isEmpty()) {
         continue;
@@ -113,7 +112,7 @@ public class Shell {
   private void handleType(String input, PrintStream out, Utils.OutputType outputType) {
     int index = input.indexOf("type") + "type".length();
     String executable = input.substring(index).trim();
-    if (COMMANDS.contains(executable)) {
+    if (BUILTIN_COMMANDS.contains(executable)) {
       Utils.writeToOutput(executable + " is a shell builtin", Utils.OutputType.REDIRECT_STDOUT, out, outputType);
       return;
     }
