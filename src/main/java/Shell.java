@@ -7,14 +7,16 @@ import java.util.*;
 public class Shell {
   private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type");
   private final Map<String, String> executableToPath = new HashMap<>();
-
-  private final HashSet<String> commands = new HashSet<>(BUILTIN_COMMANDS);
+  private final Trie commandTrie = new Trie();
   
   public Shell() {
     // init
     String systemPath = System.getenv("PATH");
+    for (String cmd : BUILTIN_COMMANDS) {
+      commandTrie.insert(cmd);
+    }
     if (systemPath != null) {
-      for (String dir : systemPath.split(":")) {
+      for (String dir : systemPath.split(File.pathSeparator)) {
         File directory = new File(dir);
         if (!directory.isDirectory()) {
           continue;
@@ -25,7 +27,7 @@ public class Shell {
         }
         for (File file : files) {
           if (file.isFile() && file.canExecute()) {
-            commands.add(file.getName());
+            commandTrie.insert(file.getName());
             executableToPath.put(file.getName(), dir);
           }
         }
@@ -35,7 +37,7 @@ public class Shell {
 
   public void run() {
     while (true) {
-      String input = Utils.processInputCommand(commands);
+      String input = Utils.processInputCommand(commandTrie);
       List<String> tokens = Utils.tokenizeInputString(input);
       if (tokens.isEmpty()) {
         continue;

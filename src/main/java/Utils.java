@@ -16,27 +16,94 @@ import java.util.regex.Pattern;
 
 public class Utils {
   static final String CHARACTERS_TO_PRESERVE = "$\"\\\n";
+  static final int TAB = 9, ENTER = 10, RING = 7, BACKSPACE = 127;
   private Utils() {
     throw new IllegalStateException("Utility class");
   }
 
-  static public String processInputCommand(Set<String> commands) {
+  private static void enableRawMode() {
+    String[] cmd = {"/bin/sh", "-c", "stty -icanon min 1 -echo < /dev/tty"};
     try {
-      Logger jlineLogger = Logger.getLogger("org.jline");
-      jlineLogger.setLevel(Level.OFF);
-
-      Terminal terminal = TerminalBuilder.builder().system(true).build();
-      Completer completer = new StringsCompleter(commands);
-      DefaultParser parser = new DefaultParser();
-      parser.setEscapeChars("".toCharArray());
-      LineReader lineReader = LineReaderBuilder.builder().terminal(terminal).completer(completer).parser(parser).build();
-      return lineReader.readLine("$ ");
-    } catch (IOException e) {
-      e.printStackTrace();
-      return "";
+      Process process = Runtime.getRuntime().exec(cmd);
+      int exitCode = process.waitFor();
+      if (exitCode != 0) {
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.exit(1);
     }
   }
 
+  private static void disableRawMode() {
+    String [] cmd = {"/bin/sh", "-c", "stty icanon echo < /dev/tty"};
+    try {
+      Process process = Runtime.getRuntime().exec(cmd);
+      int exitCode = process.waitFor();
+      if (exitCode != 0) {
+        System.exit(1);
+      }
+    } catch (Exception e) {
+      System.exit(1);
+    }
+  }
+
+  public static String processInputCommand(Trie commandTrie) {
+    StringBuilder sb = new StringBuilder();
+    enableRawMode();
+    int tabCount = 0;
+    List<String> matchedCommands = new ArrayList<>();
+    System.out.print("$ ");
+    try {
+      while (true) {
+        int key = System.in.read();
+        if (key == -1) {
+          break;
+        }
+        if (key == TAB) {
+          if (tabCount == 0) {
+            List<String> commands = commandTrie.getWordsWithPrefix(sb.toString());
+            if (commands.size() == 1) {
+              int len = sb.length();
+              System.out.print(commands.get(0).substring(len) + " ");
+              System.out.flush();
+              sb.append(commands.get(0).substring(len)).append(" ");
+            } else {
+              tabCount++;
+              matchedCommands = commands;
+              System.out.print((char) RING);
+            }
+          }
+          else {
+            System.out.println();
+            System.out.println(String.join("  ", matchedCommands));
+            System.out.print("$ " + sb);
+            tabCount = 0;
+            matchedCommands.clear();
+          }
+        }
+        else {
+          tabCount = 0;
+          if (key == ENTER) {
+            System.out.println();
+            break;
+          }
+          if (key == BACKSPACE) {
+            if (sb.length() > 0) {
+              sb.deleteCharAt(sb.length() - 1);
+              System.out.print("\b \b");
+            }
+          } else {
+            sb.append((char) key);
+            System.out.print((char) key);
+          }
+        }
+      }
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+    disableRawMode();
+    return sb.toString().trim();
+  }
   public enum OutputType {
     REDIRECT_STDOUT,
     REDIRECT_STDERR,
