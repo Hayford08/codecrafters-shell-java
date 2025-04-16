@@ -9,9 +9,6 @@ import org.jline.terminal.TerminalBuilder;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 public class Utils {
@@ -47,6 +44,23 @@ public class Utils {
     }
   }
 
+  private static String getLongCommonPrefix(List<String> words) {
+    if (words.isEmpty()) {
+      return "";
+    }
+    String prefix = words.get(0);
+    for (int i = 1; i < words.size(); i++) {
+      String curr = words.get(i);
+      int p1 = 0, p2 = 0;
+      while (p1 < prefix.length() && p2 < curr.length() && prefix.charAt(p1) == curr.charAt(p2)) {
+        p1++;
+        p2++;
+      }
+      prefix = prefix.substring(0, p1);
+    }
+    return prefix;
+  }
+
   public static String processInputCommand(Trie commandTrie) {
     StringBuilder sb = new StringBuilder();
     enableRawMode();
@@ -62,6 +76,10 @@ public class Utils {
         if (key == TAB) {
           if (tabCount == 0) {
             List<String> commands = commandTrie.getWordsWithPrefix(sb.toString());
+            if (commands.isEmpty()) {
+              System.out.print((char) RING);
+              continue;
+            }
             if (commands.size() == 1) {
               int len = sb.length();
               System.out.print(commands.get(0).substring(len) + " ");
@@ -69,6 +87,12 @@ public class Utils {
               sb.append(commands.get(0).substring(len)).append(" ");
             } else {
               tabCount++;
+              String prefix = getLongCommonPrefix(commands);
+              if (prefix.length() > sb.length()) {
+                System.out.print(prefix.substring(sb.length()));
+                System.out.flush();
+                sb.append(prefix.substring(sb.length()));
+              }
               matchedCommands = commands;
               System.out.print((char) RING);
             }
