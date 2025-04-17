@@ -5,7 +5,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Shell {
-  private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type");
+  private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type", "pwd");
   private final Map<String, String> executableToPath = new HashMap<>();
   private final Trie commandTrie = new Trie();
   
@@ -87,6 +87,10 @@ public class Shell {
       handleCat(tokens, out, outputType);
       return;
     }
+    if (command.equals("pwd")) {
+      handlePwd(tokens, out, outputType);
+      return;
+    }
     handleExternalCommand(tokens, out, outputType);
   }
 
@@ -161,6 +165,15 @@ public class Shell {
     catch (IOException e) {
       Utils.writeToOutput(e.getMessage(), Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
+  }
+
+  private void handlePwd(List<String> tokens, PrintStream out, Utils.OutputType outputType) {
+    if (tokens.size() != 1) {
+      Utils.writeToOutput("pwd: too many arguments", Utils.OutputType.REDIRECT_STDERR, out, outputType);
+      return;
+    }
+    String currentDir = System.getProperty("user.dir");
+    Utils.writeToOutput(currentDir, Utils.OutputType.REDIRECT_STDOUT, out, outputType);
   }
 
   private void handleExternalCommand(List<String> tokens, PrintStream out, Utils.OutputType outputType) {
