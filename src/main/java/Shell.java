@@ -5,7 +5,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 public class Shell {
-  private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type", "pwd");
+  private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type", "pwd", "cd");
   private final Map<String, String> executableToPath = new HashMap<>();
   private final Trie commandTrie = new Trie();
   
@@ -91,6 +91,10 @@ public class Shell {
       handlePwd(tokens, out, outputType);
       return;
     }
+    if (command.equals("cd")) {
+      handleCd(tokens, out, outputType);
+      return;
+    }
     handleExternalCommand(tokens, out, outputType);
   }
 
@@ -174,6 +178,21 @@ public class Shell {
     }
     String currentDir = System.getProperty("user.dir");
     Utils.writeToOutput(currentDir, Utils.OutputType.REDIRECT_STDOUT, out, outputType);
+  }
+
+  private void handleCd(List<String> tokens, PrintStream out, Utils.OutputType outputType) {
+    if (tokens.size() != 3) {
+      Utils.writeToOutput("cd: too many arguments", Utils.OutputType.REDIRECT_STDERR, out, outputType);
+      return;
+    }
+    String path = tokens.get(2);
+    try {
+      Path newPath = Paths.get(path).toRealPath();
+      System.setProperty("user.dir", newPath.toString());
+    }
+    catch (IOException e) {
+      Utils.writeToOutput("cd: " + path  + ": No such file or directory", Utils.OutputType.REDIRECT_STDERR, out, outputType);
+    }
   }
 
   private void handleExternalCommand(List<String> tokens, PrintStream out, Utils.OutputType outputType) {
