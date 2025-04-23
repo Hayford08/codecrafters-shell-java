@@ -258,7 +258,7 @@ public class Utils {
     }
     if (path.startsWith("~/")) {
       String homeDir = System.getProperty("user.home");
-      return homeDir + path.substring(2);
+      return homeDir + path.substring(1);
     }
     if (!path.startsWith(".")) {
       return path;
