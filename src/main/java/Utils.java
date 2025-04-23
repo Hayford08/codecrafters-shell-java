@@ -1,11 +1,3 @@
-import org.jline.reader.Completer;
-import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.impl.DefaultParser;
-import org.jline.reader.impl.completer.StringsCompleter;
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -258,5 +250,35 @@ public class Utils {
       sb.append(line).append(System.lineSeparator());
     }
     return sb.toString().trim();
+  }
+
+  static String getFullPath(String cwd, String path) {
+    if (path.equals("~")) {
+      return System.getProperty("user.home");
+    }
+    if (path.startsWith("~/")) {
+      String homeDir = System.getProperty("user.home");
+      return homeDir + path.substring(2);
+    }
+    if (!path.startsWith(".")) {
+      return path;
+    }
+    String curr = cwd + "/" + path;
+    String[] parts = curr.split("/");
+    List<String> newParts = new ArrayList<>();
+    for (String part : parts) {
+      if (part.equals(".")) {
+        continue;
+      }
+      if (!part.equals("..")) {
+        newParts.add(part);
+        continue;
+      }
+      if (newParts.isEmpty()) {
+        continue;
+      }
+      newParts.remove(newParts.size() - 1);
+    }
+    return String.join("/", newParts);
   }
 }

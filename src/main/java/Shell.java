@@ -8,9 +8,12 @@ public class Shell {
   private final Set<String> BUILTIN_COMMANDS = Set.of("exit", "echo", "type", "pwd", "cd");
   private final Map<String, String> executableToPath = new HashMap<>();
   private final Trie commandTrie = new Trie();
+
+  private String currentDir;
   
   public Shell() {
     // init
+    currentDir = System.getProperty("user.dir");
     String systemPath = System.getenv("PATH");
     for (String cmd : BUILTIN_COMMANDS) {
       commandTrie.insert(cmd);
@@ -176,7 +179,6 @@ public class Shell {
       Utils.writeToOutput("pwd: too many arguments", Utils.OutputType.REDIRECT_STDERR, out, outputType);
       return;
     }
-    String currentDir = System.getProperty("user.dir");
     Utils.writeToOutput(currentDir, Utils.OutputType.REDIRECT_STDOUT, out, outputType);
   }
 
@@ -185,13 +187,12 @@ public class Shell {
       Utils.writeToOutput("cd: too many arguments", Utils.OutputType.REDIRECT_STDERR, out, outputType);
       return;
     }
-    String path = tokens.get(2);
-    try {
-      Path newPath = Paths.get(path).toRealPath();
-      System.setProperty("user.dir", newPath.toString());
+    String path = Utils.getFullPath(currentDir, tokens.get(2));
+    if (Files.isDirectory(Path.of(path))) {
+      currentDir = path;
     }
-    catch (IOException e) {
-      Utils.writeToOutput("cd: " + path  + ": No such file or directory", Utils.OutputType.REDIRECT_STDERR, out, outputType);
+    else {
+      Utils.writeToOutput("cd: " + path + ": No such file or directory", Utils.OutputType.REDIRECT_STDERR, out, outputType);
     }
   }
 
