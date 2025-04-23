@@ -1,4 +1,5 @@
 import java.io.*;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -252,12 +253,16 @@ public class Utils {
     return sb.toString().trim();
   }
 
+  static String getHomeDirectory() {
+    return System.getenv("HOME");
+  }
+
   static String getFullPath(String cwd, String path) {
     if (path.equals("~")) {
-      return System.getProperty("user.home");
+      return getHomeDirectory();
     }
     if (path.startsWith("~/")) {
-      String homeDir = System.getProperty("user.home");
+      String homeDir = getHomeDirectory();
       return homeDir + path.substring(1);
     }
     if (!path.startsWith(".")) {
